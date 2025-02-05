@@ -53,8 +53,6 @@ exports.sendOTP= async(req,res)=>{
         message:'OTP Sent Successfully',
      })
 
-
-
    }
    catch(error){
     console.log(error);
@@ -129,7 +127,7 @@ exports.signup= async(req, res)=>{
     const hashedPassword = await bcrypt.hash(password,10);
     // entry create in DB
 
-    const ProfileDetails= await Profile.create({
+    const profileDetails= await Profile.create({
         gender: null,
         dateOfBirth: null,
         about: null,
@@ -142,7 +140,7 @@ exports.signup= async(req, res)=>{
         contactNumber,
         password:hashedPassword,
         accountType,
-        additionalDetails: ProfileDetails._id,
+        additionalDetails: profileDetails._id,
         image: `https://api.dicebear.com/5.x/initials/svg?seed=${firstname}${lastname}`,
     })
     //return res
@@ -228,12 +226,66 @@ exports.login= async(req, res)=>{
 
 //change password
 exports.changePassword= async(req,res)=>{
-    //get data from req body
-
-    //get oldpassword, newPassword, confirm Passsword
-    //validation
-    //update pwd in DB
-    //send mail - Password updated
-    //return response
+        try {
+          // Get user data from req.user
+          const userDetails = await User.findById(req.user.id)
+      
+          // Get old password, new password, and confirm new password from req.body
+          const { oldPassword, newPassword } = req.body
+      
+          // Validate old password
+          const isPasswordMatch = await bcrypt.compare(
+            oldPassword,
+            userDetails.password
+          )
+          if (!isPasswordMatch) {
+            // If old password does not match, return a 401 (Unauthorized) error
+            return res
+              .status(401)
+              .json({ success: false, message: "The password is incorrect" })
+          }
+      
+          // Update password
+          const encryptedPassword = await bcrypt.hash(newPassword, 10)
+          const updatedUserDetails = await User.findByIdAndUpdate(
+            req.user.id,
+            { password: encryptedPassword },
+            { new: true }
+          )
+      
+          // Send notification email
+          try {
+            const emailResponse = await mailSender(
+              updatedUserDetails.email,
+              "Password for your account has been updated",
+              passwordUpdated(
+                updatedUserDetails.email,
+                `Password updated successfully for ${updatedUserDetails.firstName} ${updatedUserDetails.lastName}`
+              )
+            )
+            console.log("Email sent successfully:", emailResponse.response)
+          } catch (error) {
+            // If there's an error sending the email, log the error and return a 500 (Internal Server Error) error
+            console.error("Error occurred while sending email:", error)
+            return res.status(500).json({
+              success: false,
+              message: "Error occurred while sending email",
+              error: error.message,
+            })
+          }
+      
+          // Return success response
+          return res
+            .status(200)
+            .json({ success: true, message: "Password updated successfully" })
+        } catch (error) {
+          // If there's an error updating the password, log the error and return a 500 (Internal Server Error) error
+          console.error("Error occurred while updating password:", error)
+          return res.status(500).json({
+            success: false,
+            message: "Error occurred while updating password",
+            error: error.message,
+          })
+        }
 
 }

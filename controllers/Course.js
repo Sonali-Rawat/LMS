@@ -1,8 +1,12 @@
-const Course= require("../models/Course");
-const Tag= require("../models/tags");
-const User= require("../models/User");
-const {uploadImageToCloudinary}= require("../utils/imageUploader");
-
+const Course = require("../models/Course")
+const Category = require("../models/Category")
+const Section = require("../models/Section")
+const SubSection = require("../models/Subsection")
+const User = require("../models/User")
+const { uploadImageToCloudinary } = require("../utils/imageUploader")
+const CourseProgress = require("../models/CourseProgress")
+const { convertSecondsToDuration } = require("../utils/secToDuration")
+// Function to create a new course
 //create Course handler fun
 exports.createCourse= async(req,res)=>{
     try{
@@ -21,10 +25,11 @@ exports.createCourse= async(req,res)=>{
         const userId= req.user.id;
         const instructorDetails= await User.findById(userId);
         console.log("Instructor Details: ", instructorDetails);
+       //TODO: Verify that user id and instructor detail id are same or different. 
         if(!instructorDetails){
             return res.status(404).json({
                 success:false,
-                message:'Instructor Dtails not found',
+                message:'Instructor Details not found',
             });
         }
         //check given tag is valid or not
@@ -59,7 +64,18 @@ exports.createCourse= async(req,res)=>{
         )
          //Update the tag kaa schema
          //hw
-
+         // Add the new course to the Categories
+        const categoryDetails2 = await Category.findByIdAndUpdate(
+        { _id: category },
+        {
+          $push: {
+            courses: newCourse._id,
+          },
+        },
+        { new: true }
+      )
+      console.log("HEREEEEEEEE", categoryDetails2)
+      // Return the new course and a success message
 
 
          //return response
